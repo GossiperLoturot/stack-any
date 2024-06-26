@@ -1,0 +1,18 @@
+[package]
+name = "stack-any"
+version = "0.1.0"
+authors = ["GossiperLoturot"]
+edition = "2021"
+description = "A library that provides a type that owns same size type on the stack for type erasure."
+readme = "README.md"
+repository = "https://github.com/GossiperLoturot/stack-any"
+license = "MIT"
+keywords = ["stack"]
+categories = ["data-structures"]
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[dev-dependencies]
+criterion = "0.5"
