@@ -4,6 +4,8 @@
 //!
 //! ## Usage
 //!
+//! Same size type on the stack for type erasure.
+//!
 //! ```
 //! let stack_0 = stack_any::stack_any!(Vec<i32>, vec![0, 1, 2]);
 //! let stack_1 = stack_any::stack_any!(Vec<char>, vec!['a', 'b', 'c']);
@@ -15,10 +17,25 @@
 //! assert_eq!(stacks[0].downcast_ref::<Vec<i32>>(), &vec![0, 1, 2, 3]);
 //! assert_eq!(stacks[1].downcast_ref::<Vec<char>>(), &vec!['a', 'b', 'c', 'd']);
 //! ```
+//!
+//! Different size type on the stack for type erasure.
+//!
+//! ```
+//! let mut stack = stack_any::StackAny::<8>::new(0);
+//!
+//! *stack.downcast_mut::<i32>() = 100;
+//! assert_eq!(stack.downcast_ref::<i32>(), &100);
+//!
+//! *stack.downcast_mut::<i64>() = 200;
+//! assert_eq!(stack.downcast_ref::<i64>(), &200);
+//! ```
+
+#![cfg_attr(not(feature = "std"), no_std)]
 
 /// A convertible type that owns a stack allocation of `N` size.
+#[derive(Debug)]
 pub struct StackAny<const N: usize> {
-    bytes: [std::mem::MaybeUninit<u8>; N],
+    bytes: [core::mem::MaybeUninit<u8>; N],
     size: usize,
 }
 
@@ -37,9 +54,9 @@ impl<const N: usize> StackAny<N> {
     #[inline]
     pub fn new<T>(value: T) -> Self
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        Self::try_new(value).expect("T size is not equal to N")
+        Self::try_new(value).expect("T size is larger than N")
     }
 
     /// Allocates N-size memory on the stack and then places `value` into it.
@@ -52,21 +69,21 @@ impl<const N: usize> StackAny<N> {
     /// ```
     pub fn try_new<T>(value: T) -> Option<Self>
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        if N != std::mem::size_of::<T>() {
+        if N < core::mem::size_of::<T>() {
             return None;
         }
 
         let mut slf = Self {
-            bytes: [std::mem::MaybeUninit::uninit(); N],
-            size: std::mem::size_of::<T>(),
+            bytes: [core::mem::MaybeUninit::uninit(); N],
+            size: core::mem::size_of::<T>(),
         };
 
         let src = &value as *const _ as *const _;
         let dst = slf.bytes.as_mut_ptr();
-        unsafe { std::ptr::copy_nonoverlapping(src, dst, N) };
-        std::mem::forget(value);
+        unsafe { core::ptr::copy_nonoverlapping(src, dst, slf.size) };
+        core::mem::forget(value);
 
         Some(slf)
     }
@@ -86,9 +103,9 @@ impl<const N: usize> StackAny<N> {
     #[inline]
     pub fn downcast_ref<T>(&self) -> &T
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        self.try_downcast_ref().expect("T size is not equal to N")
+        self.try_downcast_ref().expect("T size is larger than N")
     }
 
     /// Attempt to return reference to the inner value as a concrete type.
@@ -103,9 +120,9 @@ impl<const N: usize> StackAny<N> {
     /// ```
     pub fn try_downcast_ref<T>(&self) -> Option<&T>
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        if self.size != std::mem::size_of::<T>() {
+        if N < core::mem::size_of::<T>() {
             return None;
         }
         let ptr = self.bytes.as_ptr();
@@ -126,9 +143,9 @@ impl<const N: usize> StackAny<N> {
     /// ```
     pub fn downcast_mut<T>(&mut self) -> &mut T
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        self.try_downcast_mut().expect("T size is not equal to N")
+        self.try_downcast_mut().expect("T size is larger than N")
     }
 
     /// Attempt to return mutable reference to the inner value as a concrete type.
@@ -143,9 +160,9 @@ impl<const N: usize> StackAny<N> {
     /// ```
     pub fn try_downcast_mut<T>(&mut self) -> Option<&mut T>
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        if self.size != std::mem::size_of::<T>() {
+        if N < core::mem::size_of::<T>() {
             return None;
         }
         let ptr = self.bytes.as_mut_ptr();
@@ -166,9 +183,9 @@ impl<const N: usize> StackAny<N> {
     /// ```
     pub fn downcast<T>(self) -> T
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        self.try_downcast().expect("T size is not equal to N")
+        self.try_downcast().expect("T size is larger than N")
     }
 
     /// Attempt to downcast the stack to a concrete type.
@@ -182,13 +199,13 @@ impl<const N: usize> StackAny<N> {
     /// ```
     pub fn try_downcast<T>(self) -> Option<T>
     where
-        T: std::any::Any,
+        T: core::any::Any,
     {
-        if self.size != std::mem::size_of::<T>() {
+        if N < core::mem::size_of::<T>() {
             return None;
         }
         let ptr = self.bytes.as_ptr();
-        Some(unsafe { std::ptr::read(ptr as *const T) })
+        Some(unsafe { core::ptr::read(ptr as *const T) })
     }
 }
 
