@@ -1,6 +1,6 @@
 [package]
 name = "stack-any"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["GossiperLoturot"]
 edition = "2021"
 description = "A library that provides a type that owns same size type on the stack for type erasure."
@@ -14,8 +14,8 @@ categories = ["memory-management", "data-structures", "no-std"]
 default = ["std"]
 std = []
 
-[dev-dependencies]
-criterion = "0.5"
+[dev-dependencies.criterion]
+version = "0.5"
 
 [[bench]]
 name = "benchmark"

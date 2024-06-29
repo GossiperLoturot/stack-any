@@ -24,7 +24,7 @@
 pub struct StackAny<const N: usize> {
     type_id: core::any::TypeId,
     bytes: [core::mem::MaybeUninit<u8>; N],
-    drop_fn: fn(*mut std::mem::MaybeUninit<u8>) -> (),
+    drop_fn: fn(*mut core::mem::MaybeUninit<u8>) -> (),
 }
 
 impl<const N: usize> StackAny<N> {
